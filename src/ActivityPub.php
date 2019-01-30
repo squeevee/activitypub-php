@@ -56,7 +56,7 @@ class ActivityPub
         $dispatcher->addSubscriber( $this->module->get( SignatureListener::class ) );
         $dispatcher->addSubscriber( new ExceptionListener(null) );
 
-        $this->subscribeActivityHandler( $dispatcher );
+        $this->subscribeActivityHandlers( $dispatcher );
 
         $controllerResolver = new ControllerResolver();
         $argumentResolver = new ArgumentResolver();
