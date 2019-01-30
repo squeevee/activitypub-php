@@ -5,6 +5,7 @@ use ActivityPub\Activities\InboxActivityEvent;
 use ActivityPub\Activities\OutboxActivityEvent;
 use ActivityPub\Entities\ActivityPubObject;
 use ActivityPub\Objects\ObjectsService;
+use ActivityPub\Utils\Util;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -43,12 +44,11 @@ class PostController
      */
     public function handle( Request $request )
     {
-        $uri = $this->getUriWithoutQuery( $request );
-        $results = $this->objectsService->query( array( 'id' => $uri ) );
-        if ( count( $results ) === 0 ) {
+        $uri = Util::getUriWithoutQuery( $request->getUri() );
+        $object = $this->objectsService->dereference( $uri, true );
+        if ( ! $object ) {
             throw new NotFoundHttpException;
         }
-        $object = $results[0];
         $inboxField = $object->getReferencingField( 'inbox' );
         if ( $inboxField ) {
             $activity = json_decode( $request->getContent(), true );
@@ -118,16 +118,6 @@ class PostController
             return false;
         }
         return $results[0];
-    }
-
-    private function getUriWithoutQuery( Request $request )
-    {
-        $uri = $request->getUri();
-        $queryPos = strpos( $uri, '?' );
-        if ( $queryPos !== false ) {
-            $uri = substr( $uri, 0, $queryPos );
-        }
-        return $uri;
     }
 }
 ?>
