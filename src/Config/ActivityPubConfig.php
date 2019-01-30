@@ -38,6 +38,11 @@ class ActivityPubConfig
      * @var array
      */
     private $metadataMappings;
+    
+    /**
+     * @var string
+     */
+    private $idPathPrefix;
 
     /**
      * Don't call this directly - instead, use 
@@ -53,6 +58,7 @@ class ActivityPubConfig
         $this->authFunction = $builder->getAuthFunction();
         $this->jsonLdContext = $builder->getJsonLdContext();
         $this->metadataMappings = $builder->getMetadataMappings();
+        $this->idPathPrefix = $builder->getIdPathPrefix();
     }
 
     public static function createBuilder()
@@ -61,7 +67,7 @@ class ActivityPubConfig
     }
 
     /**
-     * @var array
+     * @return array
      */
     public function getDbConnectionParams()
     {
@@ -69,7 +75,7 @@ class ActivityPubConfig
     }
 
     /**
-     * @var bool
+     * @return bool
      */
     public function getIsDevMode()
     {
@@ -77,7 +83,7 @@ class ActivityPubConfig
     }
 
     /**
-     * @var string
+     * @return string
      */
     public function getDbPrefix()
     {
@@ -86,7 +92,7 @@ class ActivityPubConfig
     }
 
     /**
-     * @var Callable
+     * @return Callable
      */
     public function getAuthFunction()
     {
@@ -94,7 +100,7 @@ class ActivityPubConfig
     }
 
     /**
-     * @var array
+     * @return array
      */
     public function getJsonLdContext()
     {
@@ -107,6 +113,14 @@ class ActivityPubConfig
     public function getMetadataMappings()
     {
         return $this->metadataMappings;
+    }
+
+    /**
+     * @return string
+     */
+    public function getIdPathPrefix()
+    {
+        return $this->idPathPrefix;
     }
 }
 ?>

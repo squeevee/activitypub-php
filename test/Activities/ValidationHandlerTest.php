@@ -3,14 +3,14 @@ namespace ActivityPub\Test\Activities;
 
 use ActivityPub\Activities\InboxActivityEvent;
 use ActivityPub\Activities\OutboxActivityEvent;
-use ActivityPub\Activities\VerificationHandler;
+use ActivityPub\Activities\ValidationHandler;
 use ActivityPub\Test\TestUtils\TestActivityPubObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
-class VerificationHandlerTest extends TestCase
+class ValidationHandlerTest extends TestCase
 {
     /**
      * @var EventDispatcher
@@ -20,15 +20,14 @@ class VerificationHandlerTest extends TestCase
     public function setUp()
     {
         $this->eventDispatcher = new EventDispatcher();
-        $verificationHandler = new VerificationHandler();
-        $this->eventDispatcher->addSubscriber( $verificationHandler );
+        $validationHandler = new ValidationHandler();
+        $this->eventDispatcher->addSubscriber( $validationHandler );
     }
-    public function testVerificationHandler()
+    public function testValidationHandler()
     {
         $testCases = array(
             array(
                 'id' => 'inboxRequiredFields',
-                'activity' => array(),
                 'eventName' => InboxActivityEvent::NAME,
                 'event' => new InboxActivityEvent(
                     array(),
@@ -43,7 +42,6 @@ class VerificationHandlerTest extends TestCase
             ),
             array(
                 'id' => 'outboxRequiredFields',
-                'activity' => array(),
                 'eventName' => OutboxActivityEvent::NAME,
                 'event' => new OutboxActivityEvent(
                     array(),
@@ -54,21 +52,19 @@ class VerificationHandlerTest extends TestCase
                     Request::create( 'https://example.com' )
                 ),
                 'expectedException' => BadRequestHttpException::class,
-                'expectedExceptionMessage' => 'Missing activity fields: type',
+                'expectedExceptionMessage' => 'Missing activity fields: type,actor',
             ),
             array(
                 'id' => 'inboxPassesValidActivity',
-                'activity' => array(
-                    'id' => 'https://notexample.com/activity/1',
-                    'type' => 'Create',
-                    'actor' => 'https://notexample.com/actor/1',
-                ),
                 'eventName' => InboxActivityEvent::NAME,
                 'event' => new InboxActivityEvent(
                     array(
                         'id' => 'https://notexample.com/activity/1',
                         'type' => 'Create',
                         'actor' => 'https://notexample.com/actor/1',
+                        'object' => array(
+                            'type' => 'Note',
+                        ),
                     ),
                     TestActivityPubObject::fromArray( array(
                         'id' => 'https://notexample.com/actor/1',
@@ -79,13 +75,14 @@ class VerificationHandlerTest extends TestCase
             ),
             array(
                 'id' => 'outboxPassesValidActivity',
-                'activity' => array(
-                    'type' => 'Create',
-                ),
                 'eventName' => OutboxActivityEvent::NAME,
                 'event' => new OutboxActivityEvent(
                     array(
                         'type' => 'Create',
+                        'actor' => 'https://example.com/actor/1',
+                        'object' => array(
+                            'type' => 'Note',
+                        ),
                     ),
                     TestActivityPubObject::fromArray( array(
                         'id' => 'https://example.com/actor/1',
@@ -94,9 +91,74 @@ class VerificationHandlerTest extends TestCase
                     Request::create( 'https://example.com' )
                 ),
             ),
+            array(
+                'id' => 'outboxRequiresObjectFields',
+                'eventName' => OutboxActivityEvent::NAME,
+                'event' => new OutboxActivityEvent(
+                    array(
+                        'type' => 'Create',
+                        'actor' => 'https://example.com/actor/1',
+                    ),
+                    TestActivityPubObject::fromArray( array(
+                        'id' => 'https://example.com/actor/1',
+                        'type' => 'Person',
+                    ) ),
+                    Request::create( 'https://example.com' )
+                ),
+                'expectedException' => BadRequestHttpException::class,
+                'expectedExceptionMessage' => 'Missing activity fields: object',
+            ),
+            array(
+                'id' => 'inboxRequiresObjectFields',
+                'eventName' => InboxActivityEvent::NAME,
+                'event' => new InboxActivityEvent(
+                    array(
+                        'type' => 'Create',
+                    ),
+                    TestActivityPubObject::fromArray( array(
+                        'id' => 'https://notexample.com/actor/1',
+                        'type' => 'Person',
+                    ) ),
+                    Request::create( 'https://example.com' )
+                ),
+                'expectedException' => BadRequestHttpException::class,
+                'expectedExceptionMessage' => 'Missing activity fields: object',
+            ),
+            array(
+                'id' => 'inboxRequiresTargetFields',
+                'eventName' => InboxActivityEvent::NAME,
+                'event' => new InboxActivityEvent(
+                    array(
+                        'type' => 'Add',
+                    ),
+                    TestActivityPubObject::fromArray( array(
+                        'id' => 'https://notexample.com/actor/1',
+                        'type' => 'Person',
+                    ) ),
+                    Request::create( 'https://example.com' )
+                ),
+                'expectedException' => BadRequestHttpException::class,
+                'expectedExceptionMessage' => 'Missing activity fields: target',
+            ),
+            array(
+                'id' => 'outboxRequiresTargetFields',
+                'eventName' => OutboxActivityEvent::NAME,
+                'event' => new OutboxActivityEvent(
+                    array(
+                        'type' => 'Remove',
+                        'actor' => 'https://example.com/actor/1',
+                    ),
+                    TestActivityPubObject::fromArray( array(
+                        'id' => 'https://example.com/actor/1',
+                        'type' => 'Person',
+                    ) ),
+                    Request::create( 'https://example.com' )
+                ),
+                'expectedException' => BadRequestHttpException::class,
+                'expectedExceptionMessage' => 'Missing activity fields: target',
+            ),
         );
         foreach ( $testCases as $testCase ) {
-            $activity = $testCase['activity'];
             $event = $testCase['event'];
             if ( array_key_exists( 'expectedException', $testCase ) ) {
                 $this->expectException(

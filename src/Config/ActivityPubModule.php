@@ -1,6 +1,9 @@
 <?php
 namespace ActivityPub\Config;
 
+use ActivityPub\Activities\CreateHandler;
+use ActivityPub\Activities\NonActivityHandler;
+use ActivityPub\Activities\ValidationHandler;
 use ActivityPub\Auth\AuthListener;
 use ActivityPub\Auth\AuthService;
 use ActivityPub\Auth\SignatureListener;
@@ -90,13 +93,15 @@ class ActivityPubModule
         $this->injector->register( CollectionsService::class, CollectionsService::class )
             ->addArgument( self::COLLECTION_PAGE_SIZE )
             ->addArgument( new Reference( AuthService::class ) )
-            ->addArgument( new Reference( ContextProvider::class ) );
+            ->addArgument( new Reference( ContextProvider::class ) )
+            ->addArgument( new Reference( Client::class ) );
 
         $this->injector->register( RandomProvider::class, RandomProvider::class );
 
         $this->injector->register( IdProvider::class, IdProvider::class )
             ->addArgument( new Reference( ObjectsService::class ) )
-            ->addArgument( new Reference( RandomProvider::class ) );
+            ->addArgument( new Reference( RandomProvider::class ) )
+            ->addArgument( $config->getIdPathPrefix() );
 
         $this->injector->register( GetController::class, GetController::class )
             ->addArgument( new Reference( ObjectsService::class ) )
@@ -110,6 +115,13 @@ class ActivityPubModule
         $this->injector->register( Router::class, Router::class )
             ->addArgument( new Reference( GetController::class ) )
             ->addArgument( new Reference( PostController::class ) );
+
+        $this->injector->register( NonActivityHandler::class, NonActivityHandler::class );
+        $this->injector->register( ValidationHandler::class, ValidationHandler::class );
+        $this->injector->register( CreateHandler::class, CreateHandler::class )
+            ->addArgument( new Reference( ObjectsService::class ) )
+            ->addArgument( new Reference( IdProvider::class ) )
+            ->addArgument( new Reference( CollectionsService::class ) );
     }
 
     /**
