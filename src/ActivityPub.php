@@ -1,8 +1,6 @@
 <?php
 namespace ActivityPub;
 
-require_once __DIR__ . '/../vendor/autoload.php';
-
 use ActivityPub\Auth\AuthListener;
 use ActivityPub\Auth\SignatureListener;
 use ActivityPub\Config\ActivityPubConfig;
@@ -12,7 +10,7 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\HttpKernel;
-use Symfony\Component\EventDispatcher;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Controller\ArgumentResolver;
 use Symfony\Component\HttpKernel\Controller\ControllerResolver;
@@ -53,7 +51,7 @@ class ActivityPub
         $dispatcher->addSubscriber( $this->module->get( Router::class ) );
         $dispatcher->addSubscriber( $this->module->get( AuthListener::class ) );
         $dispatcher->addSubscriber( $this->module->get( SignatureListener::class ) );
-        $dispatcher->addSubscriber( new ExceptionListener() );
+        $dispatcher->addSubscriber( new ExceptionListener(null) );
 
         $controllerResolver = new ControllerResolver();
         $argumentResolver = new ArgumentResolver();

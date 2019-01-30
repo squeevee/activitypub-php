@@ -45,6 +45,11 @@ class ActivityPubConfigBuilder
     private $jsonLdContext;
 
     /**
+     * @var array
+     */
+    private $metadataMappings;
+
+    /**
      * Creates a new ActivityPubConfig instance with default values
      *
      * See the `set*` methods below for individual option defaults.
@@ -57,6 +62,7 @@ class ActivityPubConfigBuilder
             return false;
         };
         $this->jsonLDContext = ContextProvider::DEFAULT_CONTEXT;
+        $this->metadataMappings = null;
     }
 
     /**
@@ -194,6 +200,27 @@ class ActivityPubConfigBuilder
     public function getJsonLdContext()
     {
         return $this->jsonLdContext;
+    }
+
+    /**
+     * The `metadataMappings` can be used to customize the identifiers used
+     * in the database to represent objects created by the ActivityPub library.
+     * This should be an array of strings containing the paths to directories
+     * where mapping files are stored. (i.e., the constructor argument for
+     * Doctrine\ORM\Mapping\Driver\XmlDriver)
+     * See:
+     * https://www.doctrine-project.org/projects/doctrine-orm/en/2.6/reference/xml-mapping.html
+     * Default: null
+     */
+    public function setMetadataMappings( array $metadataMappings )
+    {
+        $this->metadataMappings = $metadataMappings;
+        return $this;
+    }
+
+    public function getMetadataMappings()
+    {
+        return $this->metadataMappings;
     }
 }
 ?>

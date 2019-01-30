@@ -35,6 +35,11 @@ class ActivityPubConfig
     private $jsonLdContext;
 
     /**
+     * @var array
+     */
+    private $metadataMappings;
+
+    /**
      * Don't call this directly - instead, use 
      * ActivityPubConfig->createBuilder()->build()
      *
@@ -47,9 +52,10 @@ class ActivityPubConfig
         $this->dbPrefix = $builder->getDbPrefix();
         $this->authFunction = $builder->getAuthFunction();
         $this->jsonLdContext = $builder->getJsonLdContext();
+        $this->metadataMappings = $builder->getMetadataMappings();
     }
 
-    public function createBuilder()
+    public static function createBuilder()
     {
         return new ActivityPubConfigBuilder();
     }
@@ -93,6 +99,14 @@ class ActivityPubConfig
     public function getJsonLdContext()
     {
         return $this->jsonLdContext;
+    }
+
+    /**
+     * @var array
+     */
+    public function getMetadataMappings()
+    {
+        return $this->metadataMappings;
     }
 }
 ?>

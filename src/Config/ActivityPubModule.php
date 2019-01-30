@@ -18,6 +18,7 @@ use ActivityPub\Utils\RandomProvider;
 use ActivityPub\Utils\SimpleDateTimeProvider;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Tools\Setup;
+use Doctrine\ORM\Mapping\Driver\XmlDriver;
 use GuzzleHttp\Client;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
@@ -44,6 +45,12 @@ class ActivityPubModule
         );
         $namingStrategy = new PrefixNamingStrategy( $config->getDbPrefix() );
         $dbConfig->setNamingStrategy( $namingStrategy );
+
+        if ( $config->getMetadataMappings() !== null)
+        {
+            $dbConfig->setMetadataDriverImpl( new XmlDriver( $config->getMetadataMappings() ) );
+        }
+        
         $dbParams = $config->getDbConnectionParams();
         $this->injector->register( EntityManager::class, EntityManager::class )
             ->setArguments( array( $dbParams, $dbConfig ) )
@@ -72,7 +79,8 @@ class ActivityPubModule
             ->addArgument( new Reference( ObjectsService::class ) );
 
         $this->injector->register( AuthListener::class, AuthListener::class )
-            ->addArgument( $config->getAuthFunction() );
+            ->addArgument( $config->getAuthFunction() )
+            ->addArgument( new Reference( ObjectsService::class ) );
 
         $this->injector->register( AuthService::class, AuthService::class );
 
