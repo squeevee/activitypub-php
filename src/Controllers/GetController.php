@@ -5,7 +5,6 @@ use ActivityPub\Auth\AuthService;
 use ActivityPub\Entities\ActivityPubObject;
 use ActivityPub\Objects\CollectionsService;
 use ActivityPub\Objects\ObjectsService;
-use ActivityPub\Utils\Util;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
@@ -49,8 +48,12 @@ class GetController
      */
     public function handle( Request $request )
     {
-        $uri = Util::getUriWithoutQuery( $request->getUri() );
-        $object = $this->objectsService->dereference( $uri, true );
+        $uri = $request->getUri();
+        $queryPos = strpos( $uri, '?' );
+        if ( $queryPos !== false ) {
+            $uri = substr( $uri, 0, $queryPos );
+        }
+        $object = $this->objectsService->dereference( $uri );
         if ( ! $object ) {
             throw new NotFoundHttpException();
         }

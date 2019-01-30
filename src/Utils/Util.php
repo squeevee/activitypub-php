@@ -31,14 +31,5 @@ class Util
         }
         return true;
     }
-
-    public static function getUriWithoutQuery( string $uri )
-    {
-        $queryPos = strpos( $uri, '?' );
-        if ( $queryPos !== false ) {
-            $uri = substr( $uri, 0, $queryPos );
-        }
-        return $uri;
-    }
 }
 ?>

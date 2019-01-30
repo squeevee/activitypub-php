@@ -112,19 +112,14 @@ class ObjectsService
      * before returning the object collapsed to $depth.
      *
      * @param string $id The id of the object to dereference
-     * @param bool $localOnly Whether the object should be dereferenced only from
-     * the database
      *
      * @return ActivityPubObject|null The dereferenced object if it exists
      */
-    public function dereference( $id, $localOnly = false )
+    public function dereference( $id )
     {
         $object = $this->getObject( $id );
         if ( $object ) {
             return $object;
-        }
-        if ( $localOnly ) {
-            return;
         }
         // TODO sign this request?
         $request = new Request( 'GET', $id, array(
