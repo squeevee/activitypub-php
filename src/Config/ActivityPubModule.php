@@ -11,6 +11,7 @@ use ActivityPub\Auth\AuthService;
 use ActivityPub\Auth\SignatureListener;
 use ActivityPub\Controllers\GetController;
 use ActivityPub\Controllers\PostController;
+use ActivityPub\Controllers\WebFingerBuilder;
 use ActivityPub\Config\ActivityPubConfig;
 use ActivityPub\Crypto\HttpSignatureService;
 use ActivityPub\Database\PrefixNamingStrategy;
@@ -117,6 +118,9 @@ class ActivityPubModule
         $this->injector->register( PostController::class, PostController::class )
             ->addArgument( new Reference( EventDispatcher::class ) )
             ->addArgument( new Reference( ObjectsService::class ) );
+
+        $this->injector->register( WebFingerBuilder::class, WebFingerBuilder::class )
+            ->addArgument( new Reference( ObjectsService::class ));
 
         $this->injector->register( Router::class, Router::class )
             ->addArgument( new Reference( GetController::class ) )
