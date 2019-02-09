@@ -5,6 +5,7 @@ use ActivityPub\Activities\InboxActivityEvent;
 use ActivityPub\Activities\OutboxActivityEvent;
 use ActivityPub\Entities\ActivityPubObject;
 use ActivityPub\Objects\ObjectsService;
+use ActivityPub\Utils\Util;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -43,9 +44,9 @@ class PostController
      */
     public function handle( Request $request )
     {
-        $uri = $this->getUriWithoutQuery( $request );
-        $results = $this->objectsService->query( array( 'id' => $uri ) );
-        if ( count( $results ) === 0 ) {
+        $uri = Util::getUriWithoutQuery( $request->getUri() );
+        $object = $this->objectsService->dereference( $uri, true );
+        if ( ! $object ) {
             throw new NotFoundHttpException;
         }
         $object = $results[0];

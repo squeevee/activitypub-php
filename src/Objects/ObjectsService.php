@@ -117,7 +117,7 @@ class ObjectsService
      *
      * @return ActivityPubObject|null The dereferenced object if it exists
      */
-    public function dereference( $id )
+    public function dereference( $id, $localOnly = false )
     {
         // TOOD pass a $request into here, so that I can sign the request below and so that
         // I can check for local objects that should not result in network calls
@@ -125,6 +125,11 @@ class ObjectsService
         if ( $object ) {
             return $object;
         }
+
+        if ( $localOnly ) {
+            return null;
+        }
+
         // TODO sign this request?
         $request = new Request( 'GET', $id, array(
             'Accept' => 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
