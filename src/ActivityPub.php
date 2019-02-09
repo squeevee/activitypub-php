@@ -11,7 +11,7 @@ use ActivityPub\Auth\AuthListener;
 use ActivityPub\Auth\SignatureListener;
 use ActivityPub\Config\ActivityPubConfig;
 use ActivityPub\Config\ActivityPubModule;
-use ActivityPub\Controllers\WebFingerBuilder;
+use ActivityPub\WebFinger\WebFingerBuilder;
 use ActivityPub\Http\Router;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Tools\SchemaTool;
@@ -72,7 +72,7 @@ class ActivityPub
         return $kernel->handle( $request );
     }
 
-    public function handleWebFinger($canonize, $request = null )
+    public function handleWebFinger($request = null )
     {
         if ( ! $request ) {
             $request = Request::createFromGlobals();
@@ -80,7 +80,7 @@ class ActivityPub
 
         $builder = $this->module->get( WebFingerBuilder::class );
 
-        return $builder->build($canonize, $request);
+        return $builder->build($request);
     }
 
     /**

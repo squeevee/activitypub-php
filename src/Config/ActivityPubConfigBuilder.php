@@ -59,6 +59,11 @@ class ActivityPubConfigBuilder
     private $idPathPrefix;
 
     /**
+     * @var Callable
+     */
+    private $canonizeFunction;
+
+    /**
      * Creates a new ActivityPubConfig instance with default values
      *
      * See the `set*` methods below for individual option defaults.
@@ -262,6 +267,34 @@ class ActivityPubConfigBuilder
     public function getIdPathPrefix()
     {
         return $this->idPathPrefix;
+    }
+
+    /**
+     * The `canonizeFunction` is a callable used in supporting WebFinger. It
+     * "canonizes" a username in the conventional form of "username@host.tld"
+     * into the user's ActivityPub Actor ID.
+     * 
+     * For example: the function might canonize "username@host.tld" into
+     * "https://host.tld/@username"
+     * 
+     * The given `canonizeFunction` must accept one argument, a string, and
+     * return either a string with the canonized ID, or `false` if the given
+     * username cannot be found.
+     * @param Callable $canonizeFunction The canonize function
+     * @return ActivityPubConfigBuilder The builder instance
+     */
+    public function setCanonizeFunction ( $canonizeFunction )
+    {
+        $this->canonizeFunction = $canonizeFunction;
+        return $this;
+    }
+
+    /**
+     * @return Callable
+     */
+    public function getCanonizeFunction ()
+    {
+        return $this->canonizeFunction;
     }
 }
 

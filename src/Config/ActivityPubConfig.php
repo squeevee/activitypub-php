@@ -45,6 +45,11 @@ class ActivityPubConfig
     private $idPathPrefix;
 
     /**
+     * @var Callable
+     */
+    private $canonizeFunction;
+
+    /**
      * Don't call this directly - instead, use 
      * ActivityPubConfig->createBuilder()->build()
      *
@@ -59,6 +64,7 @@ class ActivityPubConfig
         $this->jsonLdContext = $builder->getJsonLdContext();
         $this->metadataMappings = $builder->getMetadataMappings();
         $this->idPathPrefix = $builder->getIdPathPrefix();
+        $this->canonizeFunction = $builder->getCanonizeFunction();
     }
 
     public static function createBuilder()
@@ -121,6 +127,14 @@ class ActivityPubConfig
     public function getIdPathPrefix()
     {
         return $this->idPathPrefix;
+    }
+
+    /**
+     * @return Callable
+     */
+    public function getCanonizeFunction()
+    {
+        return $this->canonizeFunction;
     }
 }
 

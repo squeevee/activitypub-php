@@ -120,7 +120,8 @@ class ActivityPubModule
             ->addArgument( new Reference( ObjectsService::class ) );
 
         $this->injector->register( WebFingerBuilder::class, WebFingerBuilder::class )
-            ->addArgument( new Reference( ObjectsService::class ));
+            ->addArgument( new Reference( ObjectsService::class ))
+            ->setArgument('canonizeFunction', $config->getCanonizeFunction());
 
         $this->injector->register( Router::class, Router::class )
             ->addArgument( new Reference( GetController::class ) )
