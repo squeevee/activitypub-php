@@ -1,8 +1,5 @@
 vendor/
 test/db.sqlite
-<<<<<<< HEAD
 composer.lock
-=======
 ./.idea/
 /.idea
->>>>>>> upstream/master

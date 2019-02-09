@@ -122,13 +122,8 @@ class ActivityPubModule
             ->addArgument( new Reference( GetController::class ) )
             ->addArgument( new Reference( PostController::class ) );
 
-<<<<<<< HEAD
         $this->injector->register( NonActivityHandler::class, NonActivityHandler::class )
             ->addArgument( new Reference( ContextProvider::class ) );
-=======
-        $this->injector->register( NonActivityHandler::class, NonActivityHandler::class );
-
->>>>>>> upstream/master
         $this->injector->register( ValidationHandler::class, ValidationHandler::class );
 
         $this->injector->register( CreateHandler::class, CreateHandler::class )
