@@ -10,11 +10,11 @@ use ActivityPub\Entities\Field;
 use Doctrine\ORM\EntityManager;
 use ActivityPub\Objects\ObjectsService;
 use ActivityPub\Database\PrefixNamingStrategy;
+use ActivityPub\Test\TestUtils\TestActivityPubObject;
 use ActivityPub\Test\TestUtils\TestDateTimeProvider;
 use Doctrine\ORM\Tools\Setup;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
-use PHPUnit\DbUnit\TestCaseTrait;
 
 class ObjectsServiceTest extends SQLiteTestCase
 {
@@ -45,7 +45,7 @@ class ObjectsServiceTest extends SQLiteTestCase
             'objects-service.create' => new DateTime( "12:00" ),
             'objects-service.update' => new DateTime( "12:01" ),
         ) );
-        $this->httpClient = $this->createMock( Client::class );
+        $this->httpClient = $this->getMock( Client::class );
         $this->httpClient->method( 'send' )
             ->willReturn( new Response( 404 ) );
         $this->objectsService = new ObjectsService(
@@ -1129,7 +1129,7 @@ class ObjectsServiceTest extends SQLiteTestCase
         );
         $now = $this->getTime( 'objects-service.create' );
         $object = $this->objectsService->persist( $fields );
-        $this->expectException( BadMethodCallException::class );
+        $this->setExpectedException( BadMethodCallException::class );
         $object['content'] = 'This should break';
     }
 
@@ -1142,7 +1142,7 @@ class ObjectsServiceTest extends SQLiteTestCase
         );
         $now = $this->getTime( 'objects-service.create' );
         $object = $this->objectsService->persist( $fields );
-        $this->expectException( BadMethodCallException::class );
+        $this->setExpectedException( BadMethodCallException::class );
         unset( $object['content'] );
     }
 
@@ -1196,5 +1196,95 @@ class ObjectsServiceTest extends SQLiteTestCase
         );
         $this->assertEquals( $expected, $object->asArray( 3 ) );
     }
+
+    public function testReplace()
+    {
+        $testCases = array(
+            array(
+                'id' => 'basicTest',
+                'object' => array(
+                    'id' => 'https://example.com/objects/1',
+                    'type' => 'Article',
+                    'summary' => 'An article',
+                ),
+                'replacementId' => 'https://example.com/objects/1',
+                'replacement' => array(
+                    'id' => 'https://example.com/objects/1',
+                    'type' => 'Note',
+                    'contents' => 'This is a note',
+                ),
+                'expectedObject' => array(
+                    'id' => 'https://example.com/objects/1',
+                    'type' => 'Note',
+                    'contents' => 'This is a note',
+                ),
+            ),
+            array(
+                'id' => 'itDeletesOrphanedNodes',
+                'object' => array(
+                    'id' => 'https://example.com/objects/2',
+                    'type' => 'Article',
+                    'attributedTo' => array(
+                        'id' => 'https://example.com/actors/1'
+                    ),
+                    'foo' => array(
+                        'bar' => 'baz',
+                    ),
+                ),
+                'replacementId' => 'https://example.com/objects/2',
+                'replacement' => array(
+                    'id' => 'https://example.com/objects/2',
+                    'type' => 'Article',
+                    'attributedTo' => 'https://example.com/actors/1',
+                ),
+                'expectedObject' => array(
+                    'id' => 'https://example.com/objects/2',
+                    'type' => 'Article',
+                    'attributedTo' => 'https://example.com/actors/1',
+                ),
+                'expectedQueryResults' => array(
+                    array(
+                        'query' => array( 'id' => 'https://example.com/actors/1' ),
+                        'expectedResult' => array(
+                            array( 'id' => 'https://example.com/actors/1' )
+                        ),
+                    ),
+                    array(
+                        'query' => array( 'bar' => 'baz' ),
+                        'expectedResult' => array(),
+                    ),
+                ),
+            ),
+        );
+        foreach ( $testCases as $testCase ) {
+            $this->setUp();
+            $this->objectsService->persist( $testCase['object'] );
+            $replacement = $this->objectsService->replace(
+                $testCase['replacementId'],
+                $testCase['replacement']
+            );
+            $this->assertEquals(
+                $testCase['expectedObject'],
+                $replacement->asArray(),
+                "Error on test $testCase[id]"
+            );
+            if ( array_key_exists( 'expectedQueryResults', $testCase ) ) {
+                foreach ( $testCase['expectedQueryResults'] as $expectedQueryResult ) {
+                    $result = array_map(
+                        function( $obj ) { return $obj->asArray(); },
+                        $this->objectsService->query( $expectedQueryResult['query'] )
+                    );
+               }
+            }
+        }
+    }
 }
-?>
+
+
+
+
+
+
+
+
+

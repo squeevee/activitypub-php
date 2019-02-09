@@ -123,4 +123,4 @@ class ActivityPubConfig
         return $this->idPathPrefix;
     }
 }
-?>
+

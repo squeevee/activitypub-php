@@ -3,6 +3,8 @@ namespace ActivityPub\Config;
 
 use ActivityPub\Activities\CreateHandler;
 use ActivityPub\Activities\NonActivityHandler;
+use ActivityPub\Activities\DeleteHandler;
+use ActivityPub\Activities\UpdateHandler;
 use ActivityPub\Activities\ValidationHandler;
 use ActivityPub\Auth\AuthListener;
 use ActivityPub\Auth\AuthService;
@@ -59,6 +61,9 @@ class ActivityPubModule
             ->setArguments( array( $dbParams, $dbConfig ) )
             ->setFactory( array( EntityManager::class, 'create' ) );
 
+        // TODO set a global timeout on the client, and add a middleware
+        // that ensures that the client will return null rather than throwing
+        // when it gets a timeout
         $this->injector->register( Client::class, Client::class )
             ->addArgument( array( 'http_errors' => false ) );
 
@@ -94,7 +99,8 @@ class ActivityPubModule
             ->addArgument( self::COLLECTION_PAGE_SIZE )
             ->addArgument( new Reference( AuthService::class ) )
             ->addArgument( new Reference( ContextProvider::class ) )
-            ->addArgument( new Reference( Client::class ) );
+            ->addArgument( new Reference( Client::class ) )
+            ->addArgument( new Reference( SimpleDateTimeProvider::class ));
 
         $this->injector->register( RandomProvider::class, RandomProvider::class );
 
@@ -116,13 +122,26 @@ class ActivityPubModule
             ->addArgument( new Reference( GetController::class ) )
             ->addArgument( new Reference( PostController::class ) );
 
+<<<<<<< HEAD
         $this->injector->register( NonActivityHandler::class, NonActivityHandler::class )
             ->addArgument( new Reference( ContextProvider::class ) );
+=======
+        $this->injector->register( NonActivityHandler::class, NonActivityHandler::class );
+
+>>>>>>> upstream/master
         $this->injector->register( ValidationHandler::class, ValidationHandler::class );
+
         $this->injector->register( CreateHandler::class, CreateHandler::class )
             ->addArgument( new Reference( ObjectsService::class ) )
             ->addArgument( new Reference( IdProvider::class ) )
             ->addArgument( new Reference( CollectionsService::class ) );
+
+        $this->injector->register( UpdateHandler::class, UpdateHandler::class )
+            ->addArgument( new Reference( ObjectsService::class ) );
+
+        $this->injector->register( DeleteHandler::class, DeleteHandler::class )
+            ->addArgument( new Reference( SimpleDateTimeProvider::class ) )
+            ->addArgument( new Reference( ObjectsService::class ) );
     }
 
     /**
@@ -131,9 +150,9 @@ class ActivityPubModule
      * @param string $id The id of the service instance to get
      * @return object The service instance
      */
-    public function get( string $id )
+    public function get( $id )
     {
         return $this->injector->get( $id );
     }
 }
-?>
+

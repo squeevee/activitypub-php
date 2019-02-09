@@ -7,6 +7,7 @@ use ActivityPub\Entities\Field;
 use ActivityPub\Utils\Util;
 use ActivityPub\Utils\DateTimeProvider;
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\QueryBuilder;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;
 
@@ -47,7 +48,7 @@ class ObjectsService
      *
      * @return ActivityPubObject The created object
      */
-    public function persist( array $fields, string $context = 'objects-service.create' )
+    public function persist( array $fields, $context = 'objects-service.create' )
     {
         // TODO should I do JSON-LD compaction here?
         if ( array_key_exists( 'id', $fields ) ) {
@@ -62,6 +63,7 @@ class ObjectsService
         foreach ( $fields as $name => $value ) {
             $this->persistField( $object, $name, $value, $context );
         }
+        /** @noinspection PhpUnhandledExceptionInspection */
         $this->entityManager->flush();
         return $object;
     }
@@ -117,6 +119,8 @@ class ObjectsService
      */
     public function dereference( $id )
     {
+        // TOOD pass a $request into here, so that I can sign the request below and so that
+        // I can check for local objects that should not result in network calls
         $object = $this->getObject( $id );
         if ( $object ) {
             return $object;
@@ -127,11 +131,11 @@ class ObjectsService
         ) );
         $response = $this->httpClient->send( $request );
         if ( $response->getStatusCode() !== 200 || empty( $response->getBody() ) ) {
-            return;
+            return null;
         }
         $object = json_decode( $response->getBody(), true );
         if ( ! $object ) {
-            return;
+            return null;
         }
         return $this->persist( $object );
     }
@@ -223,6 +227,7 @@ class ObjectsService
         if ( ! empty( $results ) ) {
             return $results[0];
         }
+        return null;
     }
 
     /**
@@ -244,29 +249,46 @@ class ObjectsService
     {
         $object = $this->getObject( $id );
         if ( ! $object ) {
-            return;
+            return null;
         }
-        foreach( $object->getFields() as $field ) {
-            if ( array_key_exists( $field->getName(), $updatedFields ) ) {
-                $newValue = $updatedFields[$field->getName()];
-                if ( is_array( $newValue ) ) {
-                    $referencedObject = $this->persist( $newValue, 'objects-service.update' );
-                    $oldTargetObject = $field->getTargetObject();
-                    $field->setTargetObject(
-                        $referencedObject, $this->dateTimeProvider->getTime( 'objects-service.update' )
-                    );
-                    $this->entityManager->persist( $field );
-                    if ( $oldTargetObject && ! $oldTargetObject->hasField( 'id' ) ) {
-                        $this->entityManager->remove( $oldTargetObject );
-                    }
-                } else if ( ! $newValue ) {
-                    $object->removeField( $field );
-                    $this->entityManager->persist( $object );
-                    $this->entityManager->remove( $field );
-                } else {
-                    $field->setValue( $newValue, $this->dateTimeProvider->getTime( 'objects-service.update' ) );
-                    $this->entityManager->persist( $field );
+        foreach( $updatedFields as $fieldName => $newValue ) {
+            if ( $newValue === null && $object->hasField( $fieldName ) ) {
+                $field = $object->getField( $fieldName );
+                if ( $field->hasTargetObject() && ! $field->getTargetObject()->hasField( 'id' ) ) {
+                    $targetObject = $field->getTargetObject();
+                    // Clear the target object by setting a dummy value
+                    $field->setValue( '' );
+                    $this->entityManager->remove( $targetObject );
                 }
+                $object->removeField( $field );
+                $this->entityManager->persist( $object );
+                $this->entityManager->remove( $field );
+            } else if ( $object->hasField( $fieldName ) ) {
+                $field = $object->getField( $fieldName );
+                $oldTargetObject = $field->getTargetObject();
+                if ( is_array( $newValue ) ) {
+                    $newTargetObject = $this->persist( $newValue, 'objects-service.update' );
+                    $field->setTargetObject(
+                        $newTargetObject,
+                        $this->dateTimeProvider->getTime( 'objects-service.update' )
+                    );
+                } else {
+                    $field->setValue(
+                        $newValue, $this->dateTimeProvider->getTime( 'objects-service.update' )
+                    );
+                }
+                if ( $oldTargetObject && ! $oldTargetObject->hasField( 'id' ) ) {
+                    $this->entityManager->remove( $oldTargetObject );
+                }
+                $this->entityManager->persist( $field );
+            } else {
+                if ( is_array( $newValue ) ) {
+                    $newTargetObject = $this->persist( $newValue );
+                    $field = Field::withObject( $object, $fieldName, $newTargetObject );
+                } else {
+                    $field = Field::withValue( $object, $fieldName, $newValue );
+                }
+                $this->entityManager->persist( $field );
             }
         }
         $object->setLastUpdated( $this->dateTimeProvider->getTime( 'objects-service.update' ) );
@@ -274,5 +296,27 @@ class ObjectsService
         $this->entityManager->flush();
         return $object;
     }
+
+    /**
+     * Fully replaces the object referenced by $id by the new $fields
+     *
+     * @param string $id The id of the object to replace
+     * @param array $replacement The new fields to replace the object with
+     * @return ActivityPubObject|null The replaced object, or null 
+     *   if no object with $id exists
+     */
+    public function replace( $id, $replacement )
+    {
+        $existing = $this->getObject( $id );
+        if ( ! $existing ) {
+            return null;
+        }
+        foreach ( $existing->getFields() as $field ) {
+            if ( ! array_key_exists( $field->getName(), $replacement ) ) {
+                $replacement[$field->getName()] = null;
+            }
+        }
+        return $this->update( $id, $replacement );
+    }
 }
-?>
+
