@@ -1,9 +1,12 @@
-<?php
+<?php /** @noinspection PhpUnhandledExceptionInspection */
+/** @noinspection PhpUnhandledExceptionInspection */
+
+/** @noinspection PhpUnhandledExceptionInspection */
+
 namespace ActivityPub\Test\TestConfig;
 
 use ActivityPub\ActivityPub;
 use ActivityPub\Config\ActivityPubConfig;
-use ActivityPub\Test\TestConfig\APTestCase;
 
 abstract class SQLiteTestCase extends APTestCase
 {
@@ -13,6 +16,23 @@ abstract class SQLiteTestCase extends APTestCase
     private $conn = null;
     private $dbPath = '';
 
+    final public function getConnection()
+    {
+        if ( ! isset( $this->conn ) ) {
+            if ( ! isset( $this->pdo ) ) {
+                $this->dbPath = $this->getDbPath();
+                $this->pdo = new \PDO( "sqlite:{$this->dbPath}" );
+            }
+            $this->conn = $this->createDefaultDBConnection( $this->pdo, $this->dbPath );
+        }
+        return $this->conn;
+    }
+
+    protected function getDbPath()
+    {
+        return dirname( __FILE__ ) . '/db.sqlite';
+    }
+
     protected function setUp()
     {
         parent::setUp();
@@ -21,11 +41,11 @@ abstract class SQLiteTestCase extends APTestCase
             unlink( $dbPath );
         }
         $config = ActivityPubConfig::createBuilder()
-                ->setDbConnectionParams( array(
-                    'driver' => 'pdo_sqlite',
-                    'path' => $dbPath,
-                ) )
-                ->build();
+            ->setDbConnectionParams( array(
+                'driver' => 'pdo_sqlite',
+                'path' => $dbPath,
+            ) )
+            ->build();
         $activityPub = new ActivityPub( $config );
         $activityPub->updateSchema();
     }
@@ -33,26 +53,11 @@ abstract class SQLiteTestCase extends APTestCase
     protected function tearDown()
     {
         parent::tearDown();
-        unlink( $this->getDbPath() );
+        if ( file_exists( $this->getDbPath() ) ) {
+            unlink( $this->getDbPath() );
+        }
         unset( $this->conn );
         unset( $this->pdo );
-    }
-
-    protected function getDbPath()
-    {
-        return dirname( __FILE__ ) . '/db.sqlite';
-    }
-
-    final public function getConnection()
-    {
-        if ( $this->conn === null ) {
-            if ( $this->pdo === null ) {
-                $this->dbPath = $this->getDbPath();
-                $this->pdo = new \PDO( "sqlite:{$this->dbPath}" );
-            }
-            $this->conn = $this->createDefaultDBConnection( $this->pdo, $this->dbPath );
-        }
-        return $this->conn;
     }
 }
 

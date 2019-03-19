@@ -1,10 +1,8 @@
 <?php
+
 namespace ActivityPub\Activities;
 
-use ActivityPub\Activities\InboxActivityEvent;
-use ActivityPub\Activities\OutboxActivityEvent;
 use ActivityPub\Objects\ContextProvider;
-use GuzzleHttp\Client;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,13 +19,6 @@ class FollowHandler implements EventSubscriberInterface
      */
     private $contextProvider;
 
-    public static function getSubscribedEvents()
-    {
-        return array(
-            InboxActivityEvent::NAME => 'handleInbox',
-        );
-    }
-
     public function __construct( $autoAccepts,
                                  ContextProvider $contextProvider )
     {
@@ -35,12 +26,20 @@ class FollowHandler implements EventSubscriberInterface
         $this->contextProvider = $contextProvider;
     }
 
+    public static function getSubscribedEvents()
+    {
+        return array(
+            InboxActivityEvent::NAME => 'handleInbox',
+        );
+    }
+
     public function handleInbox( InboxActivityEvent $event,
+        /** @noinspection PhpUnusedParameterInspection */
                                  $eventName,
                                  EventDispatcher $eventDispatcher )
     {
         $activity = $event->getActivity();
-        if ( ! $activity['type'] === 'Follow' ) {
+        if ( !$activity['type'] === 'Follow' ) {
             return;
         }
         if ( $this->autoAccepts ) {

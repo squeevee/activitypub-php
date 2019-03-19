@@ -1,13 +1,14 @@
 <?php
+
 namespace ActivityPub\Crypto;
 
-use DateTime;
 use ActivityPub\Utils\DateTimeProvider;
+use ActivityPub\Utils\HeaderUtils;
 use ActivityPub\Utils\SimpleDateTimeProvider;
+use DateTime;
 use Psr\Http\Message\RequestInterface;
 use Symfony\Bridge\PsrHttpMessage\Factory\DiactorosFactory;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\HeaderUtils;
 
 /**
  * The HttpSignatureService provides methods to generate and verify HTTP signatures
@@ -30,16 +31,43 @@ class HttpSignatureService
     /**
      * Constructs a new HttpSignatureService
      *
-     * @param DateTimeProvider $dateTimeProvider The DateTimeProvider, 
+     * @param DateTimeProvider $dateTimeProvider The DateTimeProvider,
      * defaults to SimpleDateTimeProvider
      */
     public function __construct( DateTimeProvider $dateTimeProvider = null )
     {
-        if ( ! $dateTimeProvider ) {
+        if ( !$dateTimeProvider ) {
             $dateTimeProvider = new SimpleDateTimeProvider();
         }
         $this->dateTimeProvider = $dateTimeProvider;
         $this->psr7Factory = new DiactorosFactory();
+    }
+
+    /**
+     * Generates a signature given the request and private key
+     *
+     * @param RequestInterface $request The request to be signed
+     * @param string $privateKey The private key to use to sign the request
+     * @param string $keyId The id of the signing key
+     * @param array $headers |null The headers to use in the signature
+     *                       (default ['(request-target)', 'host', 'date'])
+     * @return string The Signature header value
+     */
+    public function sign( RequestInterface $request, $privateKey,
+                          $keyId, $headers = null )
+    {
+        if ( !$headers ) {
+            $headers = self::getDefaultHeaders();
+        }
+        $headers = array_map( 'strtolower', $headers );
+        $signingString = $this->getSigningString( $request, $headers );
+        $keypair = RsaKeypair::fromPrivateKey( $privateKey );
+        $signature = base64_encode( $keypair->sign( $signingString, 'sha256' ) );
+        $headersStr = implode( ' ', $headers );
+        return "keyId=\"$keyId\"," .
+            "algorithm=\"rsa-sha256\"," .
+            "headers=\"$headersStr\"," .
+            "signature=\"$signature\"";
     }
 
     public static function getDefaultHeaders()
@@ -52,30 +80,33 @@ class HttpSignatureService
     }
 
     /**
-     * Generates a signature given the request and private key
+     * Returns the signing string from the request
      *
-     * @param RequestInterface $psrRequest The request to be signed
-     * @param string $privateKey The private key to use to sign the request
-     * @param string $keyId The id of the signing key
-     * @param array $headers The headers to use in the signature 
-     *                       (default ['(request-target)', 'host', 'date'])
-     * @return string The Signature header value
+     * @param RequestInterface $request The request
+     * @param array $headers The headers to use to generate the signing string
+     * @return string The signing string
      */
-    public function sign( RequestInterface $request,  $privateKey,
-                          $keyId, $headers = null )
+    private function getSigningString( RequestInterface $request, $headers )
     {
-        if ( ! $headers ) {
-            $headers = self::getDefaultHeaders();
+        $signingComponents = array();
+        foreach ( $headers as $header ) {
+            $component = "${header}: ";
+            if ( $header == '(request-target)' ) {
+                $method = strtolower( $request->getMethod() );
+                $path = $request->getUri()->getPath();
+                $query = $request->getUri()->getQuery();
+                if ( !empty( $query ) ) {
+                    $path = "$path?$query";
+                }
+                $component = $component . $method . ' ' . $path;
+            } else {
+                // TODO handle 'digest' specially here too
+                $values = $request->getHeader( $header );
+                $component = $component . implode( ', ', $values );
+            }
+            $signingComponents[] = $component;
         }
-        $headers = array_map( 'strtolower', $headers );
-        $signingString = $this->getSigningString( $request, $headers );
-        $keypair = RsaKeypair::fromPrivateKey( $privateKey );
-        $signature = base64_encode( $keypair->sign( $signingString, 'rsa256' ) );
-        $headersStr = implode( ' ', $headers );
-        return "keyId=\"$keyId\"," .
-            "algorithm=\"rsa-sha256\"," .
-            "headers=\"$headersStr\"," .
-            "signature=\"$signature\"";
+        return implode( "\n", $signingComponents );
     }
 
     /**
@@ -85,12 +116,12 @@ class HttpSignatureService
      * @param string $publicKey The public key to use to verify the request
      * @return bool True if the signature is valid, false if it is missing or invalid
      */
-    public function verify( Request $request,  $publicKey )
+    public function verify( Request $request, $publicKey )
     {
         $params = array();
         $headers = $request->headers;
 
-        if ( ! $headers->has( 'date' ) ) {
+        if ( !$headers->has( 'date' ) ) {
             return false;
         }
         $now = $this->dateTimeProvider->getTime( 'http-signature.verify' );
@@ -102,7 +133,7 @@ class HttpSignatureService
         if ( $headers->has( 'signature' ) ) {
             $params = $this->parseSignatureParams( $headers->get( 'signature' ) );
         } else if ( $headers->has( 'authorization' ) &&
-                    substr($headers->get( 'authorization' ), 0, 9) === 'Signature' ) {
+            substr( $headers->get( 'authorization' ), 0, 9 ) === 'Signature' ) {
             $paramsStr = substr( $headers->get( 'authorization' ), 10 );
             $params = $this->parseSignatureParams( $paramsStr );
         }
@@ -121,43 +152,13 @@ class HttpSignatureService
         $signature = base64_decode( $params['signature'] );
         // TODO handle different algorithms here, checking the 'algorithm' param and the key headers
         $keypair = RsaKeypair::fromPublicKey( $publicKey );
-        return $keypair->verify($signingString, $signature, 'sha256');
-    }
-
-    /**
-     * Returns the signing string from the request
-     *
-     * @param Request $request The request
-     * @param array $headers The headers to use to generate the signing string
-     * @return string The signing string
-     */
-    private function getSigningString( RequestInterface $request, $headers )
-    {
-        $signingComponents = array();
-        foreach ( $headers as $header ) {
-            $component = "${header}: ";
-            if ( $header == '(request-target)' ) {
-                $method = strtolower( $request->getMethod());
-                $path = $request->getUri()->getPath();
-                $query = $request->getUri()->getQuery();
-                if ( ! empty( $query ) ) {
-                    $path = "$path?$query";
-                }
-                $component = $component . $method . ' ' . $path;
-            } else {
-                // TODO handle 'digest' specially here too
-                $values = $request->getHeader( $header );
-                $component = $component . implode( ', ', $values );
-            }
-            $signingComponents[] = $component;
-        }
-        return implode( "\n", $signingComponents );
+        return $keypair->verify( $signingString, $signature, 'sha256' );
     }
 
     /**
      * Parses the signature params from the provided params string
      *
-     * @param string $paramsStr The params represented as a string, 
+     * @param string $paramsStr The params represented as a string,
      * e.g. 'keyId="theKey",algorithm="rsa-sha256"'
      * @return array The params as an associative array
      */
@@ -169,7 +170,7 @@ class HttpSignatureService
             $paramName = $paramArr[0];
             $paramValue = $paramArr[1];
             if ( $paramName == 'headers' ) {
-                $paramValue = explode(' ', $paramValue);
+                $paramValue = explode( ' ', $paramValue );
             }
             $params[$paramName] = $paramValue;
         }

@@ -1,23 +1,28 @@
 <?php
+
 namespace ActivityPub\Test\Activities;
 
-use ActivityPub\Auth\AuthService;
 use ActivityPub\Activities\CreateHandler;
 use ActivityPub\Activities\InboxActivityEvent;
 use ActivityPub\Activities\OutboxActivityEvent;
+use ActivityPub\Auth\AuthService;
 use ActivityPub\Objects\CollectionsService;
 use ActivityPub\Objects\ContextProvider;
 use ActivityPub\Objects\IdProvider;
 use ActivityPub\Objects\ObjectsService;
+use ActivityPub\Test\TestConfig\APTestCase;
 use ActivityPub\Test\TestUtils\TestActivityPubObject;
 use ActivityPub\Utils\SimpleDateTimeProvider;
+use Doctrine\ORM\EntityManager;
 use GuzzleHttp\Client;
-use ActivityPub\Test\TestConfig\APTestCase;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
 
 class CreateHandlerTest extends APTestCase
 {
+    /**
+     * @var EventDispatcher
+     */
     private $eventDispatcher;
 
     public function setUp()
@@ -27,11 +32,13 @@ class CreateHandlerTest extends APTestCase
         $idProvider = $this->getMock( IdProvider::class );
         // TODO provision mocks
         $collectionsService = new CollectionsService(
-            4, 
+            4,
             $this->getMock( AuthService::class ),
             new ContextProvider(),
             $this->getMock( Client::class ),
-            new SimpleDateTimeProvider()
+            new SimpleDateTimeProvider(),
+            $this->getMock( EntityManager::class ),
+            $objectsService
         );
         $createHandler = new CreateHandler(
             $objectsService, $idProvider, $collectionsService

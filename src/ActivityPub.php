@@ -1,9 +1,14 @@
-<?php
+<?php /** @noinspection PhpDocMissingThrowsInspection */
+
+/** @noinspection PhpUnhandledExceptionInspection */
 
 namespace ActivityPub;
 
+use ActivityPub\Activities\AcceptHandler;
+use ActivityPub\Activities\AddHandler;
 use ActivityPub\Activities\CreateHandler;
 use ActivityPub\Activities\DeleteHandler;
+use ActivityPub\Activities\FollowHandler;
 use ActivityPub\Activities\NonActivityHandler;
 use ActivityPub\Activities\UpdateHandler;
 use ActivityPub\Activities\ValidationHandler;
@@ -37,7 +42,7 @@ class ActivityPub
      */
     public function __construct( ActivityPubConfig $config )
     {
-        $this->module = new ActivityPubModule( $config);
+        $this->module = new ActivityPubModule( $config );
     }
 
     /**
@@ -50,7 +55,7 @@ class ActivityPub
      */
     public function handle( $request = null )
     {
-        if ( ! $request ) {
+        if ( !$request ) {
             $request = Request::createFromGlobals();
         }
 
@@ -72,21 +77,6 @@ class ActivityPub
     }
 
     /**
-     * Creates the database tables necessary for the library to function,
-     * if they have not already been created.
-     *
-     * For best performance, this should only get called once in an application
-     * (for example, when other database migrations get run).
-     */
-    public function updateSchema()
-    {
-        $entityManager = $this->module->get( EntityManager::class );
-        $schemaTool = new SchemaTool( $entityManager );
-        $classes = $entityManager->getMetadataFactory()->getAllMetadata();
-        $schemaTool->updateSchema( $classes );
-    }
-
-    /**
      * Sets up the activity handling pipeline
      *
      * @param EventDispatcher $dispatcher The dispatcher to attach the event
@@ -99,6 +89,30 @@ class ActivityPub
         $dispatcher->addSubscriber( $this->module->get( CreateHandler::class ) );
         $dispatcher->addSubscriber( $this->module->get( UpdateHandler::class ) );
         $dispatcher->addSubscriber( $this->module->get( DeleteHandler::class ) );
+        $dispatcher->addSubscriber( $this->module->get( FollowHandler::class ) );
+        $dispatcher->addSubscriber( $this->module->get( AcceptHandler::class ) );
+        $dispatcher->addSubscriber( $this->module->get( AddHandler::class ) );
+    }
+
+    /**
+     * Creates the database tables necessary for the library to function,
+     * if they have not already been created.
+     *
+     * For best performance, this should only get called once in an application
+     * (for example, when other database migrations get run).
+     */
+    public function updateSchema()
+    {
+        $entityManager = @$this->module->get( EntityManager::class );
+        $driverName = $entityManager->getConnection()->getDriver()->getName();
+        if ( $driverName === 'pdo_mysql' )
+        {
+            $entityManager->getConnection()->getDatabasePlatform()
+                ->registerDoctrineTypeMapping('enum', 'string');
+        }
+        $schemaTool = new SchemaTool( $entityManager );
+        $classes = $entityManager->getMetadataFactory()->getAllMetadata();
+        $schemaTool->updateSchema( $classes, true );
     }
 }
 

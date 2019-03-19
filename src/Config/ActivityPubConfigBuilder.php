@@ -1,7 +1,7 @@
 <?php
+
 namespace ActivityPub\Config;
 
-use ActivityPub\Config\ActivityPubConfig;
 use ActivityPub\Objects\ContextProvider;
 use ActivityPub\Objects\IdProvider;
 use Exception;
@@ -59,6 +59,11 @@ class ActivityPubConfigBuilder
     private $idPathPrefix;
 
     /**
+     * @var bool
+     */
+    private $autoAcceptsFollows;
+
+    /**
      * Creates a new ActivityPubConfig instance with default values
      *
      * See the `set*` methods below for individual option defaults.
@@ -67,13 +72,14 @@ class ActivityPubConfigBuilder
     {
         $this->isDevMode = false;
         $this->dbPrefix = '';
-        $this->authFunction = function() {
+        $this->authFunction = function () {
             return false;
         };
 
         $this->metadataMappings = null;
         $this->jsonLdContext = ContextProvider::getDefaultContext();
         $this->idPathPrefix = IdProvider::DEFAULT_ID_PATH_PREFIX;
+        $this->autoAcceptsFollows = false;
     }
 
     /**
@@ -93,9 +99,19 @@ class ActivityPubConfigBuilder
      */
     private function validate()
     {
-        if ( ! $this->dbConnectionParams ) {
+        if ( !$this->dbConnectionParams ) {
             throw new Exception( "Missing required option 'dbConnectionParams'" );
         }
+    }
+
+    /**
+     * @return array
+     *
+     *
+     */
+    public function getDbConnectionParams()
+    {
+        return $this->dbConnectionParams;
     }
 
     /**
@@ -114,13 +130,13 @@ class ActivityPubConfigBuilder
     }
 
     /**
-     * @return array
+     * @return bool
      *
      *
      */
-    public function getDbConnectionParams()
+    public function getIsDevMode()
     {
-        return $this->dbConnectionParams;
+        return $this->isDevMode;
     }
 
     /**
@@ -138,13 +154,11 @@ class ActivityPubConfigBuilder
     }
 
     /**
-     * @return bool
-     *
-     *
+     * @return string
      */
-    public function getIsDevMode()
+    public function getDbPrefix()
     {
-        return $this->isDevMode;
+        return $this->dbPrefix;
     }
 
     /**
@@ -164,11 +178,11 @@ class ActivityPubConfigBuilder
     }
 
     /**
-     * @return string
+     * @return Callable
      */
-    public function getDbPrefix()
+    public function getAuthFunction()
     {
-        return $this->dbPrefix;
+        return $this->authFunction;
     }
 
     /**
@@ -190,11 +204,11 @@ class ActivityPubConfigBuilder
     }
 
     /**
-     * @return Callable
+     * @return array
      */
-    public function getAuthFunction()
+    public function getJsonLdContext()
     {
-        return $this->authFunction;
+        return $this->jsonLdContext;
     }
 
     /**
@@ -213,11 +227,11 @@ class ActivityPubConfigBuilder
     }
 
     /**
-     * @return array
+     * @return string
      */
-    public function getJsonLdContext()
+    public function getIdPathPrefix()
     {
-        return $this->jsonLdContext;
+        return $this->idPathPrefix;
     }
 
     /**
@@ -257,11 +271,35 @@ class ActivityPubConfigBuilder
     }
 
     /**
-     * @return string
+     * @return bool
      */
-    public function getIdPathPrefix()
+    public function getAutoAcceptsFollows()
     {
-        return $this->idPathPrefix;
+        return $this->autoAcceptsFollows;
+    }
+
+    /**
+     * If `autoAcceptsFollows` is `true`, the library will automatically accept
+     * incoming Follow activities instead of waiting to receive an Accept activity
+     * from the local actor.
+     *
+     * Default: false
+     *
+     * Usage for this setter:
+     *
+     *     $config->setAutoAcceptsFollows()  // $autoAcceptsFollows will be true
+     *
+     * or
+     *
+     *     $config->setAutoAcceptsFollows( $trueOrFalse )  // $autoAcceptsFollows will be the value of $trueOrFalse
+     *
+     * @param bool $autoAcceptsFollows [default: true]
+     * @return ActivityPubConfigBuilder The builder instance
+     */
+    public function setAutoAcceptsFollows( $autoAcceptsFollows = true )
+    {
+        $this->autoAcceptsFollows = $autoAcceptsFollows;
+        return $this;
     }
 }
 
