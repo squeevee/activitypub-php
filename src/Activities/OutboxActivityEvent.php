@@ -1,7 +1,6 @@
 <?php
-namespace ActivityPub\Activities;
 
-use ActivityPub\Activities\ActivityEvent;
+namespace ActivityPub\Activities;
 
 class OutboxActivityEvent extends ActivityEvent
 {

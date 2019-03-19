@@ -1,4 +1,5 @@
 <?php
+
 namespace ActivityPub\Controllers;
 
 use ActivityPub\Activities\InboxActivityEvent;
@@ -8,6 +9,7 @@ use ActivityPub\Objects\ObjectsService;
 use ActivityPub\Utils\Util;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -41,6 +43,7 @@ class PostController
      * Either dispatches an inbox/outbox activity event or throws the appropriate
      * HTTP error.
      * @param Request $request The request
+     * @return Response
      */
     public function handle( Request $request )
     {
@@ -50,18 +53,21 @@ class PostController
             throw new NotFoundHttpException;
         }
         $object = $results[0];
+        // TODO this assumes that every actor has a unique inbox URL
+        // and will break if multiple actors have the same inbox
+        // TODO also handle sharedInbox here
         $inboxField = $object->getReferencingField( 'inbox' );
         if ( $inboxField ) {
             $activity = json_decode( $request->getContent(), true );
-            if ( ! $activity || ! array_key_exists( 'actor', $activity ) ) {
+            if ( !$activity || !array_key_exists( 'actor', $activity ) ) {
                 throw new BadRequestHttpException();
             }
             $activityActor = $this->getActivityActor( $activity );
-            if ( ! $activityActor) {
+            if ( !$activityActor ) {
                 throw new BadRequestHttpException();
             }
-            if ( ! $request->attributes->has( 'signed' ) ||
-                 ! $this->authorized( $request, $activityActor ) ) {
+            if ( !$request->attributes->has( 'signed' ) ||
+                !$this->authorized( $request, $activityActor ) ) {
                 throw new UnauthorizedHttpException(
                     'Signature realm="ActivityPub",headers="(request-target) host date"'
                 );
@@ -71,23 +77,35 @@ class PostController
             $this->eventDispatcher->dispatch( InboxActivityEvent::NAME, $event );
             return $event->getResponse();
         }
+        // TODO this assumes that every actor has a unique outbox URL
+        // and will break if multiple actors have the same outbox
         $outboxField = $object->getReferencingField( 'outbox' );
         if ( $outboxField ) {
             $actorWithOutbox = $outboxField->getObject();
-            if ( ! $this->authorized( $request, $actorWithOutbox ) ) {
+            if ( !$this->authorized( $request, $actorWithOutbox ) ) {
                 throw new UnauthorizedHttpException(
                     'Signature realm="ActivityPub",headers="(request-target) host date"'
                 );
             }
             $activity = json_decode( $request->getContent(), true );
-            if ( ! $activity ) {
+            if ( !$activity ) {
                 throw new BadRequestHttpException();
             }
             $event = new OutboxActivityEvent( $activity, $actorWithOutbox, $request );
             $this->eventDispatcher->dispatch( OutboxActivityEvent::NAME, $event );
             return $event->getResponse();
-        } 
+        }
         throw new MethodNotAllowedHttpException( array( Request::METHOD_GET ) );
+    }
+
+    private function getUriWithoutQuery( Request $request )
+    {
+        $uri = $request->getUri();
+        $queryPos = strpos( $uri, '?' );
+        if ( $queryPos !== false ) {
+            $uri = substr( $uri, 0, $queryPos );
+        }
+        return $uri;
     }
 
     private function getActivityActor( array $activity )
@@ -103,7 +121,7 @@ class PostController
 
     private function authorized( Request $request, ActivityPubObject $activityActor )
     {
-        if ( ! $request->attributes->has( 'actor' ) ) {
+        if ( !$request->attributes->has( 'actor' ) ) {
             return false;
         }
         $requestActor = $request->attributes->get( 'actor' );
@@ -111,25 +129,6 @@ class PostController
             return false;
         }
         return true;
-    }
-
-    private function objectWithField( $name,  $value )
-    {
-        $results = $this->objectsService->query( array( $name => $value ) );
-        if ( count( $results ) === 0 ) {
-            return false;
-        }
-        return $results[0];
-    }
-
-    private function getUriWithoutQuery( Request $request )
-    {
-        $uri = $request->getUri();
-        $queryPos = strpos( $uri, '?' );
-        if ( $queryPos !== false ) {
-            $uri = substr( $uri, 0, $queryPos );
-        }
-        return $uri;
     }
 }
 

@@ -1,8 +1,6 @@
 <?php
-namespace ActivityPub\Config;
 
-use ActivityPub\Config\ActivityPubConfigBuilder;
-use ActivityPub\Objects\ContextProvider;
+namespace ActivityPub\Config;
 
 /**
  * The ActivityPubConfig is a data class to hold ActivityPub configuration options
@@ -45,7 +43,12 @@ class ActivityPubConfig
     private $idPathPrefix;
 
     /**
-     * Don't call this directly - instead, use 
+     * @var bool
+     */
+    private $autoAcceptsFollows;
+
+    /**
+     * Don't call this directly - instead, use
      * ActivityPubConfig->createBuilder()->build()
      *
      * @param ActivityPubConfigBuilder $builder
@@ -59,6 +62,7 @@ class ActivityPubConfig
         $this->jsonLdContext = $builder->getJsonLdContext();
         $this->metadataMappings = $builder->getMetadataMappings();
         $this->idPathPrefix = $builder->getIdPathPrefix();
+        $this->autoAcceptsFollows = $builder->getAutoAcceptsFollows();
     }
 
     public static function createBuilder()
@@ -121,6 +125,14 @@ class ActivityPubConfig
     public function getIdPathPrefix()
     {
         return $this->idPathPrefix;
+    }
+
+    /**
+     * @return bool
+     */
+    public function getAutoAcceptsFollows()
+    {
+        return $this->autoAcceptsFollows;
     }
 }
 

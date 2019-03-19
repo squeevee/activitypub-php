@@ -1,54 +1,27 @@
-<?php
+<?php /** @noinspection PhpUnhandledExceptionInspection */
+
 namespace ActivityPub\Test\Entities;
 
-use DateTime;
-use ActivityPub\Crypto\RsaKeypair;
-use ActivityPub\Entities\ActivityPubObject;
 use ActivityPub\Database\PrefixNamingStrategy;
+use ActivityPub\Entities\ActivityPubObject;
 use ActivityPub\Test\TestConfig\ArrayDataSet;
 use ActivityPub\Test\TestConfig\SQLiteTestCase;
 use ActivityPub\Test\TestUtils\TestDateTimeProvider;
+use ActivityPub\Utils\DateTimeProvider;
+use DateTime;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Tools\Setup;
 
 class EntityTest extends SQLiteTestCase
 {
+    /**
+     * @var EntityManager
+     */
     protected $entityManager;
+    /**
+     * @var DateTimeProvider
+     */
     protected $dateTimeProvider;
-
-    protected function getDataSet()
-    {
-        return new ArrayDataSet( array(
-            'objects' => array(),
-            'fields' => array(),
-            'keys' => array(),
-        ) );
-    }
-
-    protected function setUp()
-    {
-        parent::setUp();
-        $dbConfig = Setup::createAnnotationMetadataConfiguration(
-            array( __DIR__ . '/../../src/Entities' ), true
-        );
-        $namingStrategy = new PrefixNamingStrategy( '' );
-        $dbConfig->setNamingStrategy( $namingStrategy );
-        $dbParams = array(
-            'driver' => 'pdo_sqlite',
-            'path' => $this->getDbPath(),
-        );
-        $this->entityManager = EntityManager::create( $dbParams, $dbConfig );
-        $this->dateTimeProvider = new TestDateTimeProvider( array(
-            'objects-service.create' => new DateTime( "12:00" ),
-            'objects-service.update' => new DateTime( "12:01" ),
-        ) );
-    }
-
-    private function getTime( $context ) {
-        return $this->dateTimeProvider
-            ->getTime( $context )
-            ->format( "Y-m-d H:i:s" );
-    }
 
     public function testItCreatesAnObjectWithAPrivateKey()
     {
@@ -78,6 +51,13 @@ class EntityTest extends SQLiteTestCase
         $this->assertTablesEqual( $expectedKeysTable, $keysQueryTable );
     }
 
+    private function getTime( $context )
+    {
+        return $this->dateTimeProvider
+            ->getTime( $context )
+            ->format( "Y-m-d H:i:s" );
+    }
+
     public function itUpdatesAPrivateKey()
     {
         $object = new ActivityPubObject( $this->dateTimeProvider->getTime( 'objects-service.create' ) );
@@ -87,7 +67,7 @@ class EntityTest extends SQLiteTestCase
         $this->entityManager->flush();
         $newPrivateKey = 'a new private key';
         $object->setPrivateKey( $newPrivateKey );
-        $this->entityManager->persiste( $object );
+        $this->entityManager->persist( $object );
         $this->entityManager->flush();
         $now = $this->getTime( 'objects-service.create' );
         $expected = new ArrayDataSet( array(
@@ -108,6 +88,34 @@ class EntityTest extends SQLiteTestCase
         );
         $this->assertTablesEqual( $expectedObjectsTable, $objectsQueryTable );
         $this->assertTablesEqual( $expectedKeysTable, $keysQueryTable );
+    }
+
+    protected function getDataSet()
+    {
+        return new ArrayDataSet( array(
+            'objects' => array(),
+            'fields' => array(),
+            'keys' => array(),
+        ) );
+    }
+
+    protected function setUp()
+    {
+        parent::setUp();
+        $dbConfig = Setup::createAnnotationMetadataConfiguration(
+            array( __DIR__ . '/../../src/Entities' ), true
+        );
+        $namingStrategy = new PrefixNamingStrategy( '' );
+        $dbConfig->setNamingStrategy( $namingStrategy );
+        $dbParams = array(
+            'driver' => 'pdo_sqlite',
+            'path' => $this->getDbPath(),
+        );
+        $this->entityManager = EntityManager::create( $dbParams, $dbConfig );
+        $this->dateTimeProvider = new TestDateTimeProvider( array(
+            'objects-service.create' => new DateTime( "12:00" ),
+            'objects-service.update' => new DateTime( "12:01" ),
+        ) );
     }
 }
 

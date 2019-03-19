@@ -1,4 +1,5 @@
 <?php
+
 namespace ActivityPub\Test\Crypto;
 
 use ActivityPub\Crypto\RsaKeypair;
@@ -37,7 +38,7 @@ class RsaKeypairTest extends APTestCase
         $data = 'This is some data';
         $signature = 'not a real signature';
         $this->setExpectedException( \PHPUnit_Framework_Error::class );
-        $verified = $keypair->verify( $data, $signature );
+        $keypair->verify( $data, $signature );
     }
 
     public function testItReturnsNotVerifiedForValidButWrongSignature()

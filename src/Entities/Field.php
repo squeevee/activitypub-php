@@ -1,11 +1,14 @@
-<?php
+<?php /** @noinspection PhpDocMissingThrowsInspection */
+
+/** @noinspection PhpUnhandledExceptionInspection */
+
 namespace ActivityPub\Entities;
 
 use DateTime;
 
 /**
  * The field table hold the JSON-LD object graph.
- * 
+ *
  * Its structure is based on https://changelog.com/posts/graph-databases-101:
  * Every row has a subject, which is a foreign key into the Objects table,
  * a predicate, which is a the JSON field that describes the graph edge relationship
@@ -48,7 +51,7 @@ class Field
     protected $value;
     /**
      * @ManyToOne(targetEntity="ActivityPubObject", inversedBy="referencingFields")
-     * @var ActivityPubObject The value of the field if it holds another object; 
+     * @var ActivityPubObject The value of the field if it holds another object;
      *   mutually exclusive with $value
      */
     protected $targetObject;
@@ -69,7 +72,7 @@ class Field
 
     protected function __construct( DateTime $time = null )
     {
-        if ( ! $time ) {
+        if ( !$time ) {
             $time = new DateTime( "now" );
         }
         $this->created = $time;
@@ -82,16 +85,18 @@ class Field
      * @param ActivityPubObject $object The object to which this field belongs
      * @param string $name The name of the field
      * @param string $value The value of the field
+     * @param DateTime|null $time
      * @return Field The new field
+     * @throws \Exception
      */
-    public static function withValue( ActivityPubObject $object,  $name,  $value, DateTime $time = null )
+    public static function withValue( ActivityPubObject $object, $name, $value, DateTime $time = null )
     {
-        if ( ! $time ) {
+        if ( !$time ) {
             $time = new DateTime( "now" );
         }
         $field = new Field( $time );
         $field->setObject( $object, $time );
-        $field->setName( $name );
+        $field->setName( $name, $time );
         $field->setValue( $value, $time );
         return $field;
     }
@@ -102,74 +107,23 @@ class Field
      * @param ActivityPubObject $object The object to which this field belongs
      * @param string $name The name of the field
      * @param ActivityPubObject $targetObject The object that this field holds
+     * @param DateTime|null $time
      * @return Field The new field
+     * @throws \Exception
      */
     public static function withObject( ActivityPubObject $object,
                                        $name,
                                        ActivityPubObject $targetObject,
                                        DateTime $time = null )
     {
-        if ( ! $time ) {
+        if ( !$time ) {
             $time = new DateTime( "now" );
         }
         $field = new Field( $time );
         $field->setObject( $object, $time );
-        $field->setName( $name );
+        $field->setName( $name, $time );
         $field->setTargetObject( $targetObject, $time );
         return $field;
-    }
-
-    protected function setObject( ActivityPubObject $object, DateTime $time = null )
-    {
-        if ( ! $time ) {
-            $time = new DateTime( "now" );
-        }
-        $object->addField( $this, $time );
-        $this->object= $object;
-    }
-
-    public function setTargetObject( ActivityPubObject $targetObject, DateTime $time = null )
-    {
-        if ( ! $time ) {
-            $time = new DateTime( "now" );
-        }
-        $this->value = null;
-        $oldTargetObject = $this->getTargetObject();
-        if ( $oldTargetObject ) {
-            $oldTargetObject->removeReferencingField( $this );
-        }
-        $targetObject->addReferencingField( $this );
-        $this->targetObject = $targetObject;
-        $this->lastUpdated = $time;
-    }
-
-    protected function setName( $name )
-    {
-        $this->name= $name;
-    }
-
-    public function setValue( $value, DateTime $time = null )
-    {
-        if ( ! $time ) {
-            $time = new DateTime( "now" );
-        }
-        $oldTargetObject = $this->getTargetObject();
-        if ( $oldTargetObject ) {
-            $oldTargetObject->removeReferencingField( $this );
-        }
-        $this->targetObject = null;
-        $this->value = $value;
-        $this->lastUpdated = $time;
-    }
-
-    protected function setCreated( DateTime $timestamp )
-    {
-        $this->created = $timestamp;
-    }
-
-    protected function setLastUpdated( DateTime $timestamp )
-    {
-        $this->lastUpdated = $timestamp;
     }
 
     /**
@@ -182,54 +136,13 @@ class Field
         return $this->object;
     }
 
-    /**
-     * Returns the name of the field
-     *
-     * @return string
-     */
-    public function getName()
+    protected function setObject( ActivityPubObject $object, DateTime $time = null )
     {
-        return $this->name;
-    }
-
-    /**
-     * Returns the target object of the field or null if there isn't one
-     *
-     * @return ActivityPubObject|null
-     */
-    public function getTargetObject()
-    {
-        return $this->targetObject;
-    }
-
-    /**
-     * Returns the value of the field or null if there isn't one
-     *
-     * @return string|null
-     */
-    public function getValue()
-    {
-        return $this->value;
-    }
-
-    /**
-     * Returns true if the field has a value
-     *
-     * @return bool
-     */
-    public function hasValue()
-    {
-        return $this->value !== null;
-    }
-
-    /**
-     * Returns true if the field has a target object
-     *
-     * @return bool
-     */
-    public function hasTargetObject()
-    {
-        return $this->targetObject !== null;
+        if ( !$time ) {
+            $time = new DateTime( "now" );
+        }
+        $object->addField( $this, $time );
+        $this->object = $object;
     }
 
     /**
@@ -239,7 +152,7 @@ class Field
      */
     public function getValueOrTargetObject()
     {
-        if ( ! is_null( $this->targetObject) ) {
+        if ( !is_null( $this->targetObject ) ) {
             return $this->targetObject;
         } else {
             return $this->value;
@@ -256,6 +169,11 @@ class Field
         return $this->created;
     }
 
+    protected function setCreated( DateTime $timestamp )
+    {
+        $this->created = $timestamp;
+    }
+
     /**
      * Returns the field's last updated timestamp
      *
@@ -266,9 +184,15 @@ class Field
         return $this->lastUpdated;
     }
 
+    protected function setLastUpdated( DateTime $timestamp )
+    {
+        $this->lastUpdated = $timestamp;
+    }
+
     /**
      * Returns true if $this is equal to $other
      *
+     * @param Field $other
      * @return bool
      */
     public function equals( Field $other )
@@ -282,6 +206,94 @@ class Field
             return $other->hasTargetObject() &&
                 $this->getTargetObject()->equals( $other->getTargetObject() );
         }
+    }
+
+    /**
+     * Returns the name of the field
+     *
+     * @return string
+     */
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    public function setName( $name, DateTime $time = null )
+    {
+        if ( ! $time ) {
+            $time = new DateTime( "now" );
+        }
+        $this->name = $name;
+        $this->setLastUpdated( $time );
+    }
+
+    /**
+     * Returns true if the field has a value
+     *
+     * @return bool
+     */
+    public function hasValue()
+    {
+        return $this->value !== null;
+    }
+
+    /**
+     * Returns the value of the field or null if there isn't one
+     *
+     * @return string|null
+     */
+    public function getValue()
+    {
+        return $this->value;
+    }
+
+    public function setValue( $value, DateTime $time = null )
+    {
+        if ( !$time ) {
+            $time = new DateTime( "now" );
+        }
+        $oldTargetObject = $this->getTargetObject();
+        if ( $oldTargetObject ) {
+            $oldTargetObject->removeReferencingField( $this );
+        }
+        $this->targetObject = null;
+        $this->value = $value;
+        $this->lastUpdated = $time;
+    }
+
+    /**
+     * Returns true if the field has a target object
+     *
+     * @return bool
+     */
+    public function hasTargetObject()
+    {
+        return $this->targetObject !== null;
+    }
+
+    /**
+     * Returns the target object of the field or null if there isn't one
+     *
+     * @return ActivityPubObject|null
+     */
+    public function getTargetObject()
+    {
+        return $this->targetObject;
+    }
+
+    public function setTargetObject( ActivityPubObject $targetObject, DateTime $time = null )
+    {
+        if ( !$time ) {
+            $time = new DateTime( "now" );
+        }
+        $this->value = null;
+        $oldTargetObject = $this->getTargetObject();
+        if ( $oldTargetObject ) {
+            $oldTargetObject->removeReferencingField( $this );
+        }
+        $targetObject->addReferencingField( $this );
+        $this->targetObject = $targetObject;
+        $this->lastUpdated = $time;
     }
 }
 
