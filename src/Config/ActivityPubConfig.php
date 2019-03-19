@@ -31,11 +31,6 @@ class ActivityPubConfig
      * @var array
      */
     private $jsonLdContext;
-
-    /**
-     * @var array
-     */
-    private $metadataMappings;
     
     /**
      * @var string
@@ -60,7 +55,6 @@ class ActivityPubConfig
         $this->dbPrefix = $builder->getDbPrefix();
         $this->authFunction = $builder->getAuthFunction();
         $this->jsonLdContext = $builder->getJsonLdContext();
-        $this->metadataMappings = $builder->getMetadataMappings();
         $this->idPathPrefix = $builder->getIdPathPrefix();
         $this->autoAcceptsFollows = $builder->getAutoAcceptsFollows();
     }
@@ -109,14 +103,6 @@ class ActivityPubConfig
     public function getJsonLdContext()
     {
         return $this->jsonLdContext;
-    }
-
-    /**
-     * @var array
-     */
-    public function getMetadataMappings()
-    {
-        return $this->metadataMappings;
     }
 
     /**

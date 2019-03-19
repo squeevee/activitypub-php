@@ -55,11 +55,6 @@ class ActivityPubModule
         );
         $namingStrategy = new PrefixNamingStrategy( $config->getDbPrefix() );
         $dbConfig->setNamingStrategy( $namingStrategy );
-
-        if ( $config->getMetadataMappings() !== null)
-        {
-            $dbConfig->setMetadataDriverImpl( new XmlDriver( $config->getMetadataMappings() ) );
-        }
         
         $dbParams = $config->getDbConnectionParams();
         $this->injector->register( EntityManager::class, EntityManager::class )

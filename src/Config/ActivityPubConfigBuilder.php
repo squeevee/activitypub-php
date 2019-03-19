@@ -49,11 +49,6 @@ class ActivityPubConfigBuilder
     private $jsonLdContext;
 
     /**
-     * @var array
-     */
-    private $metadataMappings;
-
-    /**
      * @var string
      */
     private $idPathPrefix;
@@ -232,27 +227,6 @@ class ActivityPubConfigBuilder
     public function getIdPathPrefix()
     {
         return $this->idPathPrefix;
-    }
-
-    /**
-     * The `metadataMappings` can be used to customize the identifiers used
-     * in the database to represent objects created by the ActivityPub library.
-     * This should be an array of strings containing the paths to directories
-     * where mapping files are stored. (i.e., the constructor argument for
-     * Doctrine\ORM\Mapping\Driver\XmlDriver)
-     * See:
-     * https://www.doctrine-project.org/projects/doctrine-orm/en/2.6/reference/xml-mapping.html
-     * Default: null
-     */
-    public function setMetadataMappings( array $metadataMappings )
-    {
-        $this->metadataMappings = $metadataMappings;
-        return $this;
-    }
-
-    public function getMetadataMappings()
-    {
-        return $this->metadataMappings;
     }
 
     /**
