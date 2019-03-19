@@ -20,7 +20,7 @@ use DateTime;
  * A subject can have multiple values for the same predicate - this represents a JSON-LD
  * array.
  *
- * @Entity @Table(name="fields")
+ * @Entity
  */
 class Field
 {

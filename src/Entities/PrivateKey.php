@@ -5,7 +5,7 @@ namespace ActivityPub\Entities;
 /**
  * The keys table holds the private keys associated with ActivityPub actors
  *
- * @Entity @Table(name="keys")
+ * @Entity
  */
 class PrivateKey
 {

@@ -11,7 +11,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 
 /**
  * Represents an ActivityPub JSON-LD object
- * @Entity @Table(name="objects")
+ * @Entity
  */
 class ActivityPubObject implements ArrayAccess
 {
