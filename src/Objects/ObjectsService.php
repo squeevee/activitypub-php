@@ -11,6 +11,7 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\QueryBuilder;
 use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Request;
+use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 
 class ObjectsService
 {
@@ -58,6 +59,46 @@ class ObjectsService
         return $this->update( $id, $replacement );
     }/** @noinspection PhpDocMissingThrowsInspection */
     
+    /**
+     * Returns the full object represented by $id, expanded up to depth $depth
+     *
+     * This method will first check the local DB for the object. If it's not there,
+     * it will request the object from that object's server, fully expand it by
+     * dereferencing any children that are id values, and persist it to the local DB
+     * before returning the object collapsed to $depth.
+     *
+     * @param string $id The id of the object to dereference
+     *
+     * @return ActivityPubObject|null The dereferenced object if it exists
+     */
+    public function dereference( $id )
+    {
+        // TOOD pass a $request into here, so that I can sign the request below and so that
+        // I can check for local objects that should not result in network calls
+        $object = $this->getObject( $id );
+        if ( $object ) {
+            return $object;
+        }
+
+        $incomingRequest = SymfonyRequest::createFromGlobals();
+        if (parse_url($id, PHP_URL_HOST) === $incomingRequest->getHost())
+            return null;
+
+        // TODO sign this request?
+        $request = new Request( 'GET', $id, array(
+            'Accept' => 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
+        ) );
+        $response = $this->httpClient->send( $request );
+        if ( $response->getStatusCode() !== 200 || empty( $response->getBody() ) ) {
+            return null;
+        }
+        $object = json_decode( $response->getBody(), true );
+        if ( !$object ) {
+            return null;
+        }
+        return $this->persist( $object );
+    }
+
     protected function getObject( $id )
     {
         $results = $this->query( array( 'id' => $id ) );
@@ -276,39 +317,5 @@ class ObjectsService
         }
     }
 
-    /**
-     * Returns the full object represented by $id, expanded up to depth $depth
-     *
-     * This method will first check the local DB for the object. If it's not there,
-     * it will request the object from that object's server, fully expand it by
-     * dereferencing any children that are id values, and persist it to the local DB
-     * before returning the object collapsed to $depth.
-     *
-     * @param string $id The id of the object to dereference
-     *
-     * @return ActivityPubObject|null The dereferenced object if it exists
-     */
-    public function dereference( $id )
-    {
-        // TOOD pass a $request into here, so that I can sign the request below and so that
-        // I can check for local objects that should not result in network calls
-        $object = $this->getObject( $id );
-        if ( $object ) {
-            return $object;
-        }
-        // TODO sign this request?
-        $request = new Request( 'GET', $id, array(
-            'Accept' => 'application/ld+json; profile="https://www.w3.org/ns/activitystreams"'
-        ) );
-        $response = $this->httpClient->send( $request );
-        if ( $response->getStatusCode() !== 200 || empty( $response->getBody() ) ) {
-            return null;
-        }
-        $object = json_decode( $response->getBody(), true );
-        if ( !$object ) {
-            return null;
-        }
-        return $this->persist( $object );
-    }
 }
 

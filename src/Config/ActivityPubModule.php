@@ -28,7 +28,6 @@ use ActivityPub\Utils\RandomProvider;
 use ActivityPub\Utils\SimpleDateTimeProvider;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Tools\Setup;
-use Doctrine\ORM\Mapping\Driver\XmlDriver;
 use GuzzleHttp\Client;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;

@@ -48,7 +48,7 @@ class PostController
     public function handle( Request $request )
     {
         $uri = Util::getUriWithoutQuery( $request->getUri() );
-        $object = $this->objectsService->dereference( $uri, true );
+        $object = $this->objectsService->dereference( $uri );
         if ( ! $object ) {
             throw new NotFoundHttpException;
         }

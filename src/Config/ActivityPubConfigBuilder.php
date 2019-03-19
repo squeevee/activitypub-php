@@ -70,8 +70,6 @@ class ActivityPubConfigBuilder
         $this->authFunction = function () {
             return false;
         };
-
-        $this->metadataMappings = null;
         $this->jsonLdContext = ContextProvider::getDefaultContext();
         $this->idPathPrefix = IdProvider::DEFAULT_ID_PATH_PREFIX;
         $this->autoAcceptsFollows = false;
